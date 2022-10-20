@@ -1,0 +1,46 @@
+.root {
+  background-color: white;
+  min-height: 100vh;
+}
+
+.root .header {
+  background-color: white;
+  border-bottom: 1px solid rgb(242, 242, 242);
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 0px 8px 0px rgb(0 0 0 / 50%);
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.root .header .logo {
+  float: left;
+  width: 120px;
+  height: 32px;
+  margin: 16px 24px 16px 0;
+  position: relative;
+}
+
+.root .header .navLink.active {
+  color: #1890ff;
+}
+
+.root .main {
+  /* padding: 0 50px; */
+}
+
+.root .main .content {
+  min-height: calc(100vh - 64px);
+  background: white;
+}
+
+.root .footer {
+  text-align: center;
+}
+
+.root .searchBar {
+  flex: 1;
+  margin: 0 20px;
+}

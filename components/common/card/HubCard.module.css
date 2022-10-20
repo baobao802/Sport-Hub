@@ -1,0 +1,9 @@
+.root .meta_rate {
+  line-height: 0;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.root .meta_address {
+  margin-bottom: 0;
+}

@@ -1,0 +1,21 @@
+.club {
+  width: 320px;
+  position: sticky;
+  top: 84px;
+  height: fit-content;
+}
+
+.club .edit_btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.club_header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.widgets {
+  flex: 1;
+}

@@ -1,0 +1,4 @@
+.card_item {
+  width: calc(100% / 4);
+  text-align: center;
+}
