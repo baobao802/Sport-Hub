@@ -1,12 +1,17 @@
 import { GoogleOutlined } from '@ant-design/icons';
 import { PrimaryLayout } from '@components/layout';
 import { Button, Card } from 'antd';
+import { useSession, signIn } from 'next-auth/react';
 import Head from 'next/head';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { Fragment } from 'react';
 import styles from '../styles/Login.module.css';
 
 export default function LoginPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  console.log(router);
+
   return (
     <Fragment>
       <Head>
@@ -21,11 +26,24 @@ export default function LoginPage() {
           }}
           bordered={false}
         >
-          <Link href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google`}>
+          <Button
+            type='primary'
+            size='large'
+            icon={<GoogleOutlined />}
+            block
+            onClick={() =>
+              signIn('google', {
+                callbackUrl: (router.query?.redirect as string) ?? '/',
+              })
+            }
+          >
+            Google
+          </Button>
+          {/* <Link href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google`}>
             <Button type='primary' size='large' icon={<GoogleOutlined />} block>
               Google
             </Button>
-          </Link>
+          </Link> */}
         </Card>
       </div>
     </Fragment>

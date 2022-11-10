@@ -1,7 +1,5 @@
 import { Layout } from 'antd';
-import Link from 'next/link';
 import React, { ReactNode } from 'react';
-import { City } from 'types';
 import Header from './Header';
 import styles from './Layout.module.css';
 
@@ -14,11 +12,6 @@ const PrimaryLayout = (props: Props) => {
     <Layout className={styles.root}>
       <Header />
       <Layout.Content className={styles.main}>
-        {/* <Breadcrumb style={{ margin: '16px 0' }}>
-          <Breadcrumb.Item>Home</Breadcrumb.Item>
-          <Breadcrumb.Item>List</Breadcrumb.Item>
-          <Breadcrumb.Item>App</Breadcrumb.Item>
-        </Breadcrumb> */}
         <div className={styles.content}>{props.children}</div>
       </Layout.Content>
       {/* <Footer /> */}

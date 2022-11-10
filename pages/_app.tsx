@@ -1,37 +1,41 @@
 import type { AppProps } from 'next/app';
-import { FC, useState } from 'react';
+import { FC } from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { GlobalProvider } from 'contexts/global';
 import 'antd/dist/antd.css';
 import '../styles/globals.css';
-import { City } from 'types';
 import moment from 'moment';
 import 'moment/locale/vi';
-import { SWRConfig } from 'swr';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Session } from 'next-auth';
 
 moment().locale('vi');
+const queryClient = new QueryClient();
 
 function MyApp({
   Component,
   pageProps,
-}: AppProps & { Component: { Layout: FC<any> } }) {
-  const [cities, setCities] = useState<City[]>([]);
-
+}: AppProps<{ session: Session }> & { Component: { Layout: FC<any> } }) {
   if (!Component.Layout) {
     return (
-      <GlobalProvider>
-        <Component {...pageProps} />
-      </GlobalProvider>
+      <SessionProvider session={pageProps.session}>
+        <GlobalProvider>
+          <Component {...pageProps} />
+        </GlobalProvider>
+      </SessionProvider>
     );
   }
 
   return (
-    <GlobalProvider>
-      <SWRConfig value={{ refreshInterval: 0, revalidateIfStale: false }}>
-        <Component.Layout cities={cities}>
-          <Component {...pageProps} />
-        </Component.Layout>
-      </SWRConfig>
-    </GlobalProvider>
+    <SessionProvider session={pageProps.session}>
+      <GlobalProvider>
+        <QueryClientProvider client={queryClient}>
+          <Component.Layout>
+            <Component {...pageProps} />
+          </Component.Layout>
+        </QueryClientProvider>
+      </GlobalProvider>
+    </SessionProvider>
   );
 }
 

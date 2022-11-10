@@ -5,9 +5,9 @@ import type { ClubDetails, ClubMember } from 'types';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import _ from 'lodash';
-import { useGlobalContext } from 'contexts/global';
 import { RcFile } from 'antd/lib/upload';
 import { updateClubById } from '@services/clubApi';
+import { useSession } from 'next-auth/react';
 
 type Props = {
   clubDetails: ClubDetails;
@@ -35,8 +35,8 @@ const columns: ColumnsType<ClubMember> = [
 
 const ClubMembersTable = (props: Props) => {
   const [dataSource, setDataSource] = useState<ClubMember[]>(props.data || []);
-  const { user } = useGlobalContext();
-  const canUpdate = user?.email === props.clubDetails.manager.email;
+  const { data: session } = useSession();
+  const canUpdate = session?.user?.email === props.clubDetails.manager.email;
 
   const uploadProps: UploadProps = {
     accept: '.xlsx',
@@ -55,7 +55,7 @@ const ClubMembersTable = (props: Props) => {
             const mappedData = _.map(
               _.drop(parsedData),
               (col: any, index): ClubMember => ({
-                id: index,
+                id: String(index),
                 fullName: col[0],
                 yearOfBirth: col[1],
                 number: col[2],

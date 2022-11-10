@@ -5,6 +5,7 @@ import { createClub } from '@services/clubApi';
 import { Card, message, Typography } from 'antd';
 import { useGlobalContext } from 'contexts/global';
 import _ from 'lodash';
+import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import React, { Fragment, useEffect } from 'react';
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export default function CreateClubPage(props: Props) {
-  const { isAuthenticated, user, setUser } = useGlobalContext();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const onSubmit = async (values: FormValues) => {
@@ -37,7 +38,6 @@ export default function CreateClubPage(props: Props) {
     try {
       const res = await createClub(payload);
       message.success(`CLB ${payload.name} đã được thành lập.`);
-      user && setUser({ ...user, clubId: res.id });
       router.push(`/clubs/${res.id}`);
     } catch (error) {
       console.error(error);
@@ -45,8 +45,8 @@ export default function CreateClubPage(props: Props) {
   };
 
   useEffect(() => {
-    isAuthenticated === false && router.push('/login');
-  }, [isAuthenticated]);
+    status === 'authenticated' && router.push('/login');
+  }, [status]);
 
   return (
     <Fragment>

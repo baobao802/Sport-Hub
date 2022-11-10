@@ -1,27 +1,23 @@
-import { Badge, Card, Checkbox, DatePicker, Modal } from 'antd';
+import { Badge, Card, Checkbox, DatePicker, Modal, Space, Spin } from 'antd';
 import type {
   CheckboxOptionType,
   CheckboxValueType,
 } from 'antd/lib/checkbox/Group';
-import {
-  Booking,
-  BookingStatus,
-  Pitch,
-  PitchType,
-  RequestBookingParams,
-} from 'types';
+import { Booking, Pitch, PitchType, RequestBookingParams } from 'types';
 import { DatePickerProps, RangePickerProps } from 'antd/lib/date-picker';
 import { DATE_FORMAT } from 'constant';
 import moment from 'moment';
-import React, { Fragment, useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import _ from 'lodash';
 import { getSuccessBooking } from '@services/bookingApi';
 import { useGlobalContext } from 'contexts/global';
 import { useRouter } from 'next/router';
+import { useQuery } from '@tanstack/react-query';
 
 interface Props {
   data: Pitch;
   options: CheckboxOptionType[];
+  updatedPitchId?: string;
   onSelect?: (value?: any) => void;
 }
 
@@ -55,26 +51,41 @@ const disabledDate: RangePickerProps['disabledDate'] = (current) => {
 };
 
 const PitchCard = (props: Props) => {
-  const { data, options, onSelect } = props;
+  const { data, options, updatedPitchId, onSelect } = props;
   const { currentCity } = useGlobalContext();
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [selectedValue, setSelectedValue] = useState<string>();
   const [date, setDate] = useState<string>(() => moment().format(DATE_FORMAT));
-  const [successBookings, setSuccessBookings] = useState<Booking[]>();
-  const defaultValues = _.map(successBookings, ({ time }) => time);
-  const mappedOptions = _.map(options, (option: CheckboxOptionType) => {
-    const hm = String(option.value).split(' - ')[0].split(':');
-    return {
-      ...option,
-      disabled:
-        _.includes(defaultValues, option.value) ||
-        moment(date, DATE_FORMAT)
-          .hour(Number(hm[0]))
-          .minute(Number(hm[1]))
-          .valueOf() <= moment().valueOf(),
-    };
+  const successBookings = useQuery<Booking[]>({
+    queryKey: [
+      'successBookings',
+      { date, pitchId: data.id, cityId: currentCity?.id },
+    ],
+    queryFn: ({ queryKey }) =>
+      getSuccessBooking(queryKey[1] as RequestBookingParams),
+    enabled: visible,
   });
+  const defaultValues = useMemo(
+    () => _.map(successBookings.data, ({ cost }) => cost.time),
+    [successBookings.data],
+  );
+  const mappedOptions = useMemo(
+    () =>
+      _.map(options, (option: CheckboxOptionType) => {
+        const hm = String(option.value).split(' - ')[0].split(':');
+        return {
+          ...option,
+          disabled:
+            _.includes(defaultValues, option.value) ||
+            moment(date, DATE_FORMAT)
+              .hour(Number(hm[0]))
+              .minute(Number(hm[1]))
+              .valueOf() <= moment().valueOf(),
+        };
+      }),
+    [options, defaultValues, date],
+  );
 
   const onDateChange: DatePickerProps['onChange'] = (_date, dateString) => {
     setDate(dateString);
@@ -103,25 +114,17 @@ const PitchCard = (props: Props) => {
     setSelectedValue(selected);
   };
 
-  const fetchSuccessBooking = async () => {
-    const params: RequestBookingParams = {
-      date,
-      pitchId: data.id,
-      city: currentCity?.name,
-    };
-    const res = await getSuccessBooking(params);
-    setSuccessBookings(res.items);
-  };
-
-  useEffect(() => {
-    fetchSuccessBooking();
-  }, [date]);
-
   useEffect(() => {
     if (String(data.id) === String(router.query?.pitchId)) {
       setVisible(true);
     }
   }, [data, router]);
+
+  useEffect(() => {
+    if (updatedPitchId === data.id) {
+      successBookings.refetch();
+    }
+  }, [updatedPitchId]);
 
   return (
     <Badge.Ribbon {...mapPitchType(data.type)}>
@@ -147,12 +150,27 @@ const PitchCard = (props: Props) => {
         onOk={handleOk}
         onCancel={handleCancel}
       >
-        <Checkbox.Group
-          options={mappedOptions}
-          defaultValue={defaultValues}
-          value={[...defaultValues, selectedValue] as CheckboxValueType[]}
-          onChange={handleSelectValues}
-        />
+        {successBookings.isError ? (
+          'Something go wrong!'
+        ) : successBookings.isLoading ? (
+          <Space
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              padding: '20px',
+              height: '200px',
+            }}
+          >
+            <Spin size='large' />
+          </Space>
+        ) : (
+          <Checkbox.Group
+            options={mappedOptions}
+            defaultValue={defaultValues}
+            value={[...defaultValues, selectedValue] as CheckboxValueType[]}
+            onChange={handleSelectValues}
+          />
+        )}
       </Modal>
       <Card hoverable onClick={() => setVisible(true)}>
         Sân {data.name}

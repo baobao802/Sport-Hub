@@ -1,33 +1,44 @@
 export type User = {
   id: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  club?: {
-    id: number;
-    name: string;
-    avatar: string;
-  };
+  telephone: string;
+  club?: Pick<ClubDetails, 'id' | 'name' | 'avatar'>;
+};
+
+export type ClubMember = {
+  id: string;
+  fullName: string;
+  yearOfBirth: number;
+  number: string;
+  position: string;
+};
+
+export type ClubDetails = {
+  id: string;
+  name: string;
+  manager: Omit<User, 'club'>;
+  bio: string;
+  avatar: string;
+  members: ClubMember[];
 };
 
 export type GlobalContextType = {
-  user: User | null;
-  setUser: (user: User) => void;
-  isAuthenticated: boolean | undefined;
-  login: (credentials: any) => Promise<void>;
-  logout: () => Promise<void>;
   cities: City[];
-  currentCity: Omit<City, 'districts'> | undefined;
-  setCurrentCity: (city: Omit<City, 'districts'>) => void;
-};
-
-export type City = {
-  id: number;
-  name: string;
-  districts: District[];
+  currentCity: City | null;
+  changeCurrentCity: (city: City) => void;
 };
 
 export type District = {
-  id: number;
+  id: string;
   name: string;
+};
+
+export type City = {
+  id: string;
+  name: string;
+  districts: District[];
 };
 
 export type Address = {
@@ -37,129 +48,15 @@ export type Address = {
 };
 
 export type Hub = {
-  id: React.Key;
+  id: string;
   name: string;
-  picture: string;
-  rating: number;
+  cover?: string;
   address: Address;
 };
 
-export type HubDetails = {
-  id: number;
-  name: string;
-  owner: {
-    email: string;
-    telephone: string;
-    firstName: string;
-    lastName: string;
-  };
-  address: Address;
-  pitches: Pitch[];
-  rating: number;
-};
-
-export type Pitch = {
-  id: number;
-  name: string;
-  type: PitchType;
-  cost: {
-    time: string;
-    value: number;
-  }[];
-  hub: Pick<Hub, 'id' | 'name'>;
-};
-
-export type Booking = {
-  id: number;
-  pitch: Omit<Pitch, 'cost'>;
-  createdAt: string;
-  deletedAt: string;
+export type Cost = {
   time: string;
-  cost: number;
-  hub: Pick<Hub, 'id' | 'name'>;
-  status: BookingStatus;
-  date: string;
-};
-
-export type BookingPayload = {
-  pitchId: number;
-  time: string;
-  cost: number;
-  date: string;
-};
-
-export type BookingState = {
-  [key: React.Key]: BookingPayload | undefined;
-};
-
-export type ClubDetails = {
-  id: number;
-  name: string;
-  manager: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    telephone: string;
-  };
-  bio: string;
-  avatar: string;
-  ranking: number;
-  members: ClubMember[];
-};
-
-export type FieldData = {
-  name: string | number | (string | number)[];
-  value?: any;
-  touched?: boolean;
-  validating?: boolean;
-  errors?: string[];
-};
-
-export type Team = {
-  id: number;
-  name: string;
-  avatar: string;
-  ranking: number;
-  goalsScored: number;
-};
-
-export type MatchDetails = {
-  id: number;
-  group: string;
-  pairOfTeams: [Team, Team];
-};
-
-export type ClubStandings = {
-  rank: number;
-  id: number;
-  name: string;
-  avatar: string;
-  matchesPlayed: number;
-  won: number;
-  draw: number;
-  loss: number;
-  goalsScored: number;
-  points: number;
-};
-
-export type GroupStandings = {
-  id: number;
-  name: string;
-  clubs: ClubStandings[];
-};
-
-export type Standings = {
-  session: string;
-  groups: GroupStandings[];
-};
-
-export type ClubMember = {
-  id: number;
-  fullName: string;
-  yearOfBirth: number;
-  number: string;
-  position: string;
+  value: number;
 };
 
 export enum PitchType {
@@ -178,6 +75,91 @@ export enum BookingStatus {
   CANCEL = 'CANCEL',
 }
 
+export type Pitch = {
+  id: string;
+  name: string;
+  type: PitchType;
+  cost: Cost[];
+  hub: Hub;
+};
+
+export type HubDetails = {
+  id: string;
+  name: string;
+  owner: User;
+  address: Address;
+  pitches: Pitch[];
+  rating: number;
+  cover?: string;
+};
+
+export type Booking = {
+  id: string;
+  pitch: Omit<Pitch, 'cost'>;
+  createdAt: string;
+  deletedAt: string;
+  cost: Cost;
+  status: BookingStatus;
+  date: string;
+};
+
+export type BookingPayload = {
+  pitchId: string;
+  date: string;
+  cost: Cost;
+  cityId?: string;
+};
+
+export type BookingState = {
+  [key: React.Key]: BookingPayload | undefined;
+};
+
+export type FieldData = {
+  name: string | number | (string | number)[];
+  value?: any;
+  touched?: boolean;
+  validating?: boolean;
+  errors?: string[];
+};
+
+export type Team = {
+  id: string;
+  name: string;
+  avatar: string;
+  ranking: number;
+  goalsScored: number;
+};
+
+export type MatchDetails = {
+  id: string;
+  group: string;
+  pairOfTeams: [Team, Team];
+};
+
+export type ClubStandings = {
+  rank: number;
+  id: string;
+  name: string;
+  avatar: string;
+  matchesPlayed: number;
+  won: number;
+  draw: number;
+  loss: number;
+  goalsScored: number;
+  points: number;
+};
+
+export type GroupStandings = {
+  id: string;
+  name: string;
+  clubs: ClubStandings[];
+};
+
+export type Standings = {
+  session: string;
+  groups: GroupStandings[];
+};
+
 export type RequestParams = {
   page?: number;
   size?: number;
@@ -186,8 +168,8 @@ export type RequestParams = {
 export type RequestBookingParams = RequestParams & {
   date?: string;
   status?: BookingStatus;
-  pitchId?: number;
-  city?: string;
+  pitchId?: string;
+  cityId?: string;
 };
 
 export type Rating = {
@@ -202,7 +184,7 @@ export type Rating = {
 export type Notification = {
   id: string;
   bookingId: string;
-  createdAt: number;
   content: string;
+  createdAt: number;
   marked: boolean;
 };

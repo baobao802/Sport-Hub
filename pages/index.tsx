@@ -1,5 +1,4 @@
 import { Fragment } from 'react';
-import type { GetStaticProps } from 'next';
 import { PrimaryLayout } from '@components/layout';
 import { Carousel, Col, Row, Typography } from 'antd';
 import styles from '../styles/Home.module.css';
@@ -8,9 +7,7 @@ import Link from 'next/link';
 import Head from 'next/head';
 import { useGlobalContext } from 'contexts/global';
 
-interface Props {}
-
-export default function HomePage(props: Props) {
+export default function HomePage() {
   const { currentCity } = useGlobalContext();
 
   return (
@@ -47,7 +44,7 @@ export default function HomePage(props: Props) {
         <Row style={{ height: 360 }}>
           <Col span={12}>
             <div style={{ height: 360, width: 400 }}>
-              <Link href={`/explore?city=${currentCity?.name}`}>
+              <Link href={`/explore?cityId=${currentCity?.id}`}>
                 <a className={styles.explore_item}>
                   <Image
                     layout='fill'
@@ -65,7 +62,7 @@ export default function HomePage(props: Props) {
             <Row>
               <Col span={24}>
                 <div style={{ height: 180, width: 400 }}>
-                  <Link href={`/explore?city=${currentCity?.name}`}>
+                  <Link href={`/explore?cityId=${currentCity?.id}`}>
                     <a className={styles.explore_item}>
                       <Image
                         layout='fill'
@@ -83,7 +80,7 @@ export default function HomePage(props: Props) {
 
               <Col span={24}>
                 <div style={{ height: 180, width: 400 }}>
-                  <Link href='/partner-registration'>
+                  <Link href='https://sport-hub-admin.vercel.app/sign-up'>
                     <a className={styles.explore_item}>
                       <Image
                         layout='fill'
@@ -119,16 +116,3 @@ export default function HomePage(props: Props) {
 }
 
 HomePage.Layout = PrimaryLayout;
-
-export const getStaticProps: GetStaticProps = async (context) => {
-  return {
-    props: {
-      data: [1, 2, 3],
-    },
-    revalidate: 12 * 60 * 60,
-    // notFound: true,
-    // redirect: {
-    //   destination: '/403'
-    // }
-  };
-};

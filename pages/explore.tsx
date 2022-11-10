@@ -1,19 +1,20 @@
+import { FrownOutlined } from '@ant-design/icons';
 import { PitchFilter } from '@components/common';
 import { mapPitchType } from '@components/common/card/PitchCard';
 import { PrimaryLayout } from '@components/layout';
-import { getSuccessBooking } from '@services/bookingApi';
-import { getAllPitches, RequestParams } from '@services/hubApi';
-import { Badge, Card, Col, Row, Typography } from 'antd';
+import { getAllAvailablePitches, PitchRequestParams } from '@services/hubApi';
+import { useQuery } from '@tanstack/react-query';
+import { Badge, Card, Col, Result, Row, Space, Spin, Typography } from 'antd';
 import { DATE_FORMAT } from 'constant';
-import { useGlobalContext } from 'contexts/global';
 import _ from 'lodash';
 import moment from 'moment';
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { Fragment, useEffect, useState } from 'react';
-import type { District, Pitch, RequestBookingParams } from 'types';
+import React, { Fragment, useEffect } from 'react';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import type { District, Pitch } from 'types';
 import styles from '../styles/Explore.module.css';
 
 interface Props {
@@ -22,85 +23,14 @@ interface Props {
 }
 
 export default function ExplorePage(props: Props) {
-  const { pitches } = props;
-  const { currentCity } = useGlobalContext();
-  const [filteredPitches, setFilteredPitches] = useState(pitches);
-  const [successBookings, setSuccessBookings] = useState<any>();
-  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
-  const { search, date, time, type } = router.query;
-
-  const fetchSuccessBooking = async () => {
-    try {
-      setIsSearching(true);
-      const params: RequestBookingParams = {
-        date: date as string,
-        city: currentCity?.name,
-        size: 100,
-      };
-      const res = await getSuccessBooking(params);
-      setSuccessBookings(_.groupBy(res.items, 'pitch.id'));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  useEffect(() => {
-    if (moment(date, DATE_FORMAT).isValid()) {
-      fetchSuccessBooking();
-    }
-  }, [date]);
-
-  useEffect(() => {
-    const availablePitches = _.filter(pitches, (pitch) => {
-      if (type && pitch.type !== type) {
-        return false;
-      }
-
-      if (
-        search &&
-        !_.includes(_.lowerCase(pitch.name), _.lowerCase(String(search)))
-      ) {
-        return false;
-      }
-
-      if (time) {
-        const foundTime = _.find(pitch.cost, ({ time: t }) => t === time);
-        if (!foundTime) {
-          return false;
-        }
-        const hm = String(time).split(' - ')[0].split(':');
-        const overtime =
-          moment(date, DATE_FORMAT)
-            .hour(Number(hm[0]))
-            .minute(Number(hm[1]))
-            .valueOf() < moment().valueOf();
-        const booked = _.find(
-          _.get(successBookings, pitch.id) || [],
-          (b) => b.time === time,
-        );
-        return !booked && !overtime;
-      }
-
-      const available = _.some(pitch.cost, ({ time: t }) => {
-        const hm = String(t).split(' - ')[0].split(':');
-        const overtime =
-          moment(date, DATE_FORMAT)
-            .hour(Number(hm[0]))
-            .minute(Number(hm[1]))
-            .valueOf() < moment().valueOf();
-        const booked = _.find(
-          _.get(successBookings, pitch.id) || [],
-          (b) => b.time === t,
-        );
-        return !booked && !overtime;
-      });
-      return available;
-    });
-    setFilteredPitches(availablePitches);
-  }, [successBookings, search, date, time, type]);
+  const { search, date, time, type, cityId } = router.query;
+  const availablePitches = useQuery({
+    queryKey: ['availablePitches', { cityId, date, time, type, search }],
+    queryFn: ({ queryKey }) =>
+      getAllAvailablePitches(queryKey[1] as PitchRequestParams),
+    initialData: props.pitches,
+  });
 
   return (
     <Fragment>
@@ -109,7 +39,7 @@ export default function ExplorePage(props: Props) {
       </Head>
 
       <section id='tournaments' className='section'>
-        <Typography.Title level={3}>Giải đấu</Typography.Title>
+        <Typography.Title level={3}>Giải đấu (coming soon)</Typography.Title>
         <Card>
           <Card.Grid className={styles.card_item}>
             <Link href='/tournaments/dsc-championship'>
@@ -125,24 +55,80 @@ export default function ExplorePage(props: Props) {
       </section>
 
       <section id='hubs' className={`section ${styles.root}`}>
-        <Typography.Title level={3}>Sân bóng</Typography.Title>
-        <PitchFilter loading={isSearching} />
-        <Row gutter={[20, 20]} style={{ marginTop: '20px' }}>
-          {filteredPitches.map((pitch) => (
-            <Col key={pitch.id} sm={24} md={12} lg={8} xl={6}>
-              <Badge.Ribbon {...mapPitchType(pitch.type)}>
-                <Link href={`/hubs/${pitch.hub.id}?pitchId=${pitch.id}`}>
-                  <Card key={''} size='small' hoverable>
-                    <div style={{ fontSize: '16px' }}>Sân {pitch.name}</div>
-                    <Typography.Text type='secondary'>
-                      {pitch.hub.name}
-                    </Typography.Text>
-                  </Card>
-                </Link>
-              </Badge.Ribbon>
-            </Col>
-          ))}
-        </Row>
+        <Typography.Title level={3} style={{ textAlign: 'center' }}>
+          Sân bóng
+        </Typography.Title>
+        <PitchFilter />
+        {availablePitches.isError ? (
+          <Result status='error' title='Đã có lỗi xảy ra!' />
+        ) : availablePitches.isLoading ? (
+          <Space
+            style={{
+              width: '100%',
+              justifyContent: 'center',
+              padding: '20px',
+              height: '360px',
+            }}
+          >
+            <Spin size='large' />
+          </Space>
+        ) : _.size(availablePitches.data) === 0 ? (
+          <Result
+            icon={<FrownOutlined />}
+            title='Tiếc quá! Hết sân trống rồi!'
+            subTitle='Bạn hãy thử tìm kiếm theo tiêu chí khác xem sao.'
+          />
+        ) : (
+          <div>
+            <Typography.Paragraph
+              type='secondary'
+              style={{ textAlign: 'right', fontSize: 14 }}
+            >
+              {_.size(availablePitches.data)} sân bóng được tìm thấy
+            </Typography.Paragraph>
+
+            <div
+              id='scrollableDiv'
+              style={{
+                height: 480,
+                width: '100%',
+                overflow: 'auto',
+              }}
+            >
+              <InfiniteScroll
+                dataLength={_.size(availablePitches.data)}
+                scrollableTarget='scrollableDiv'
+                next={function () {
+                  throw new Error('Function not implemented.');
+                }}
+                hasMore={false}
+                loader={undefined}
+                style={{ height: 480, padding: '0 10px' }}
+              >
+                <Row gutter={[20, 20]} style={{ marginTop: '20px' }}>
+                  {availablePitches.data.map((pitch) => (
+                    <Col key={pitch.id} sm={24} md={12} lg={8} xl={6}>
+                      <Badge.Ribbon {...mapPitchType(pitch.type)}>
+                        <Link
+                          href={`/hubs/${pitch.hub.id}?pitchId=${pitch.id}`}
+                        >
+                          <Card key={''} size='small' hoverable>
+                            <div style={{ fontSize: '16px' }}>
+                              Sân {pitch.name}
+                            </div>
+                            <Typography.Text type='secondary'>
+                              {pitch.hub.name}
+                            </Typography.Text>
+                          </Card>
+                        </Link>
+                      </Badge.Ribbon>
+                    </Col>
+                  ))}
+                </Row>
+              </InfiniteScroll>
+            </div>
+          </div>
+        )}
       </section>
     </Fragment>
   );
@@ -151,12 +137,15 @@ export default function ExplorePage(props: Props) {
 ExplorePage.Layout = PrimaryLayout;
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { city } = context.query as RequestParams;
-  const res = await getAllPitches({ city });
+  const { cityId } = context.query as PitchRequestParams;
+  const availablePitches = await getAllAvailablePitches({
+    cityId,
+    date: moment().format(DATE_FORMAT),
+  });
 
   return {
     props: {
-      pitches: res.items,
+      pitches: availablePitches,
     },
   };
 };

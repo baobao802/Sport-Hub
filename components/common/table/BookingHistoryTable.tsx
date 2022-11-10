@@ -1,20 +1,20 @@
 import { Button, message, Table, Tag, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
 import type { ColumnsType } from 'antd/lib/table';
-import { Booking, BookingStatus, RequestBookingParams } from 'types';
+import { Booking, BookingStatus } from 'types';
 import _ from 'lodash';
 import moment from 'moment';
 import { DATE_FORMAT } from 'constant';
 import useAsync from '@hooks/useAsync';
 import { cancelBooking } from '@services/bookingApi';
 import { postNotification } from '@services/notificationFirebase';
-import { useGlobalContext } from 'contexts/global';
+import { useSession } from 'next-auth/react';
 
 type Props = {
   data?: Booking[];
   loading?: boolean;
   type?: BookingStatus;
-  refresh?: (params: RequestBookingParams) => Promise<void>;
+  refresh?: () => void;
 };
 
 const columns: ColumnsType<Booking> = [
@@ -49,14 +49,14 @@ const columns: ColumnsType<Booking> = [
     dataIndex: 'cost',
     align: 'right',
     render(value) {
-      return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return `${value.value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     },
   },
 ];
 
 const BookingHistoryTable = (props: Props) => {
   const [dataSource, setDataSource] = useState<Booking[]>(props.data || []);
-  const { user } = useGlobalContext();
+  const { data: session } = useSession();
   const { execute, status } = useAsync(cancelBooking, {
     immediate: false,
   });
@@ -65,7 +65,7 @@ const BookingHistoryTable = (props: Props) => {
     execute(bookingId);
     postNotification(hubId, {
       bookingId: bookingId,
-      content: `Tài khoản ${user?.email} đã hủy sân.`,
+      content: `Tài khoản ${session?.user?.email} đã hủy sân.`,
       createdAt: new Date().valueOf(),
       marked: false,
     });
@@ -77,7 +77,7 @@ const BookingHistoryTable = (props: Props) => {
       title: 'Thời gian thuê',
       dataIndex: 'createdAt',
       render(value) {
-        return moment(value).format('dddd, Do MMMM YYYY, HH:mm:ss');
+        return moment(value).format('HH:mm:ss, dddd, Do MMMM YYYY');
       },
     },
     {
@@ -85,7 +85,7 @@ const BookingHistoryTable = (props: Props) => {
       key: 'action',
       width: 100,
       render: (_, record) => {
-        const hm = String(record.time).split(' - ')[0].split(':');
+        const hm = String(record.cost.time).split(' - ')[0].split(':');
         const onTime =
           moment().add(30, 'minute').valueOf() <
           moment(record.date, DATE_FORMAT)
@@ -99,7 +99,10 @@ const BookingHistoryTable = (props: Props) => {
             disabled={!onTime}
             loading={status === 'pending'}
             onClick={() =>
-              handleCancelingBooking(String(record.hub.id), String(record.id))
+              handleCancelingBooking(
+                String(record.id),
+                String(record.pitch.hub.id),
+              )
             }
           >
             Hủy
@@ -115,7 +118,7 @@ const BookingHistoryTable = (props: Props) => {
       title: 'Thời gian hủy',
       dataIndex: 'deletedAt',
       render(value) {
-        return moment(value).format('dddd, Do MMMM YYYY, HH:mm:ss');
+        return moment(value).format('HH:mm:ss, dddd, Do MMMM YYYY');
       },
     },
     {
@@ -134,7 +137,7 @@ const BookingHistoryTable = (props: Props) => {
   useEffect(() => {
     if (status === 'success') {
       message.success('Hủy thành công!');
-      props.refresh && props.refresh({ status: props.type });
+      props.refresh && props.refresh();
     }
     if (status === 'error') {
       message.error('Không thể hủy!');
