@@ -42,75 +42,57 @@ const PitchFilter = (props: Props) => {
   const router = useRouter();
   const initialValues = {
     search: router.query.search,
-    date: router.query.date ? moment(router.query.date, DATE_FORMAT) : moment(),
-    time: router.query.time,
-    type: router.query.type,
+    // date: router.query.date ? moment(router.query.date, DATE_FORMAT) : moment(),
+    // time: router.query.time,
+    // type: router.query.type,
   };
 
   const onFinish = (values: FilterParams) => {
     const query = router.query;
     query.search = values.search;
-    query.date = values.date?.format('DD/MM/YYYY');
-    query.time = values.time;
-    query.type = values.type;
+    // query.date = values.date?.format('DD/MM/YYYY');
+    // query.time = values.time;
+    // query.type = values.type;
     router.push({
       query: _.omitBy(query, _.isNil),
     });
-    // values.search = values.search || undefined;
-    // const newSearchParams = {
-    //   page: paramsObj.page as any,
-    //   ...values,
-    // };
-    // setSearchParams(_.omitBy(newSearchParams, _.isNil));
   };
 
   return (
     <Form
       form={form}
       name='pitch_filter'
-      layout='inline'
       initialValues={initialValues}
       onFinish={onFinish}
+      onValuesChange={_.debounce(onFinish, 300)}
     >
-      <Form.Item name='search'>
+      <Form.Item name='search' style={{ textAlign: 'center' }}>
         <Input
           prefix={<SearchOutlined />}
-          allowClear
           size='large'
           placeholder='Địa điểm cho thuê'
-          style={{ minWidth: 320 }}
+          style={{ maxWidth: 480 }}
         />
       </Form.Item>
-      <div style={{ flex: 1 }}></div>
+      {/* <div style={{ flex: 1 }}></div>
       <Form.Item name='date'>
         <DatePicker
           format={DATE_FORMAT}
           disabledDate={disabledDate}
-          size='large'
           allowClear={false}
         />
       </Form.Item>
       <Form.Item name='time'>
-        <Select
-          style={{ width: 150 }}
-          size='large'
-          placeholder='Khung giờ'
-          allowClear
-        >
+        <Select style={{ width: 150 }} placeholder='Khung giờ' allowClear>
           {_.map(genTimeDurations(), (time) => (
-            <Select.Option ket={time} value={time}>
+            <Select.Option key={time} value={time}>
               {time}
             </Select.Option>
           ))}
         </Select>
       </Form.Item>
       <Form.Item name='type'>
-        <Select
-          style={{ width: 120 }}
-          size='large'
-          placeholder='Loại sân'
-          allowClear
-        >
+        <Select style={{ width: 120 }} placeholder='Loại sân' allowClear>
           <Select.Option value={PitchType.FIVE_A_SIDE}>5 vs 5</Select.Option>
           <Select.Option value={PitchType.SEVEN_A_SIDE}>7 vs 7</Select.Option>
           <Select.Option value={PitchType.ELEVEN_A_SIDE}>
@@ -119,15 +101,10 @@ const PitchFilter = (props: Props) => {
         </Select>
       </Form.Item>
       <Form.Item style={{ marginRight: '0' }}>
-        <Button
-          type='primary'
-          htmlType='submit'
-          size='large'
-          loading={props.loading}
-        >
+        <Button type='primary' htmlType='submit' loading={props.loading}>
           Tìm kiếm
         </Button>
-      </Form.Item>
+      </Form.Item> */}
     </Form>
   );
 };

@@ -1,5 +1,4 @@
 import { Fragment } from 'react';
-import type { GetStaticProps } from 'next';
 import { PrimaryLayout } from '@components/layout';
 import { Carousel, Col, Row, Typography } from 'antd';
 import styles from '../styles/Home.module.css';
@@ -8,9 +7,7 @@ import Link from 'next/link';
 import Head from 'next/head';
 import { useGlobalContext } from 'contexts/global';
 
-interface Props {}
-
-export default function HomePage(props: Props) {
+export default function HomePage() {
   const { currentCity } = useGlobalContext();
 
   return (
@@ -19,18 +16,18 @@ export default function HomePage(props: Props) {
         <title>Trang chủ - SportHub</title>
       </Head>
       <section className={styles.hero_section}>
-        <Carousel autoplay>
+        <Carousel autoplay autoplaySpeed={3000}>
           <div className={styles.hero_content}>
-            <h3>1</h3>
+            <img src='/images/hero_1.png' />
           </div>
           <div className={styles.hero_content}>
-            <h3>2</h3>
+            <img src='/images/hero_2.jpeg' />
           </div>
           <div className={styles.hero_content}>
-            <h3>3</h3>
+            <img src='/images/hero_3.png' />
           </div>
           <div className={styles.hero_content}>
-            <h3>4</h3>
+            <img src='/images/hero_4.png' />
           </div>
         </Carousel>
       </section>
@@ -39,15 +36,13 @@ export default function HomePage(props: Props) {
         <div style={{ textAlign: 'center', margin: 32 }}>
           <Typography.Title>Khám phá</Typography.Title>
           <Typography.Paragraph>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur
-            consectetur laboriosam quis maxime exercitationem natus amet, modi
-            vel!
+            Hãy bắt đầu khám phá và trải nghiệm các tính năng của Sport Hub.
           </Typography.Paragraph>
         </div>
         <Row style={{ height: 360 }}>
           <Col span={12}>
             <div style={{ height: 360, width: 400 }}>
-              <Link href={`/explore?city=${currentCity?.name}`}>
+              <Link href={`/explore?cityId=${currentCity?.id}`}>
                 <a className={styles.explore_item}>
                   <Image
                     layout='fill'
@@ -65,7 +60,7 @@ export default function HomePage(props: Props) {
             <Row>
               <Col span={24}>
                 <div style={{ height: 180, width: 400 }}>
-                  <Link href={`/explore?city=${currentCity?.name}`}>
+                  <Link href={`/explore?cityId=${currentCity?.id}`}>
                     <a className={styles.explore_item}>
                       <Image
                         layout='fill'
@@ -83,7 +78,7 @@ export default function HomePage(props: Props) {
 
               <Col span={24}>
                 <div style={{ height: 180, width: 400 }}>
-                  <Link href='/partner-registration'>
+                  <Link href='https://sport-hub-admin.vercel.app/sign-up'>
                     <a className={styles.explore_item}>
                       <Image
                         layout='fill'
@@ -107,10 +102,10 @@ export default function HomePage(props: Props) {
         <div className={styles.about_header}>
           <Typography.Title>Về chúng tôi</Typography.Title>
           <Typography.Paragraph>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. In quidem
-            necessitatibus culpa eligendi pariatur minus? Explicabo totam
-            delectus nulla voluptates quam repudiandae cumque ea assumenda
-            magnam quos odit, optio suscipit!
+            Với mong muốn kết nối các địa điểm cho thuê sân bóng đá tới với mọi
+            người. Chúng tôi tạo ra trang web này giúp bạn có thể tìm kiếm và
+            đặt lịch sân bóng đá dễ dàng. Cung cấp hệ thống cho thuê sân bóng
+            dành cho chủ sân bóng.
           </Typography.Paragraph>
         </div>
       </section>
@@ -119,16 +114,3 @@ export default function HomePage(props: Props) {
 }
 
 HomePage.Layout = PrimaryLayout;
-
-export const getStaticProps: GetStaticProps = async (context) => {
-  return {
-    props: {
-      data: [1, 2, 3],
-    },
-    revalidate: 12 * 60 * 60,
-    // notFound: true,
-    // redirect: {
-    //   destination: '/403'
-    // }
-  };
-};

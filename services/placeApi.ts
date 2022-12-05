@@ -1,5 +1,6 @@
-import api from './api';
+import axios from 'axios';
+import { City } from 'types';
 
 export async function getCities() {
-  return api.get(`/places/cities`).then((res) => res.data);
+  return axios.get<City[]>(`/api/v1/places/cities`).then((res) => res.data);
 }

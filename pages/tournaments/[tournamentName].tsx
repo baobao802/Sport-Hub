@@ -198,18 +198,18 @@ TournamentPage.Layout = PrimaryLayout;
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const MATCHES: MatchDetails[] = [
     {
-      id: 1,
+      id: '1',
       group: 'A',
       pairOfTeams: [
         {
-          id: 123,
+          id: '123',
           name: 'SmartDev',
           avatar: '/images/52758.png',
           goalsScored: 1,
           ranking: 10,
         },
         {
-          id: 213,
+          id: '213',
           name: 'Paradox',
           avatar: '/images/52914.png',
           goalsScored: 1,
@@ -223,11 +223,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     session: '2022',
     groups: [
       {
-        id: 1,
+        id: '1',
         name: 'A',
         clubs: [
           {
-            id: 1,
+            id: '1',
             name: 'SmartDev',
             avatar: '/images/52758.png',
             matchesPlayed: 1,
@@ -239,7 +239,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             rank: 1,
           },
           {
-            id: 2,
+            id: '2',
             name: 'Paradox',
             avatar: '/images/52914.png',
             matchesPlayed: 1,
@@ -253,11 +253,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         ],
       },
       {
-        id: 2,
+        id: '2',
         name: 'B',
         clubs: [
           {
-            id: 1,
+            id: '1',
             name: 'SmartDev',
             avatar: '/images/52758.png',
             matchesPlayed: 1,
@@ -269,7 +269,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             rank: 1,
           },
           {
-            id: 2,
+            id: '2',
             name: 'Paradox',
             avatar: '/images/52914.png',
             matchesPlayed: 1,

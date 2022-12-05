@@ -1,8 +1,8 @@
-.hero_section .hero_content h3 {
+.hero_section .hero_content img {
   height: 420px;
+  object-fit: cover;
+  margin: auto;
   color: #fff;
-  line-height: 420px;
-  text-align: center;
   background: #364d79;
 }
 

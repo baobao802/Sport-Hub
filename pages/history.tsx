@@ -1,29 +1,26 @@
 import { BookingHistoryTable } from '@components/common/table';
 import { PrimaryLayout } from '@components/layout';
-import useAsync from '@hooks/useAsync';
 import { getMyBookingHistory } from '@services/bookingApi';
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader, Tabs } from 'antd';
+import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Booking, BookingStatus } from 'types';
 
-interface Props {}
-
-export default function History(props: Props) {
+export default function History() {
   const router = useRouter();
+  const { status } = useSession();
   const [activeKey, setActiveKey] = useState(BookingStatus.DONE);
-  const {
-    data: bookingHistories,
-    execute: refreshBookingHistory,
-    status,
-  } = useAsync<{
-    items: Booking[];
-  } | null>(getMyBookingHistory, { args: [{ status: activeKey }] });
-
-  useEffect(() => {
-    refreshBookingHistory({ status: activeKey });
-  }, [activeKey]);
+  const bookingHistories = useQuery<Booking[]>({
+    queryKey: ['bookingsHistory', activeKey],
+    queryFn: ({ queryKey }) =>
+      getMyBookingHistory({ status: queryKey[1] as BookingStatus }),
+  });
+  if (status === 'unauthenticated') {
+    router.push('/login');
+  }
 
   return (
     <Fragment>
@@ -44,17 +41,17 @@ export default function History(props: Props) {
           <Tabs.TabPane tab='Đã xác nhận' key={BookingStatus.DONE}>
             <BookingHistoryTable
               type={BookingStatus.DONE}
-              data={bookingHistories?.items}
-              loading={status === 'pending'}
-              refresh={refreshBookingHistory}
+              data={bookingHistories.data}
+              loading={bookingHistories.isLoading}
+              refresh={bookingHistories.refetch}
             />
           </Tabs.TabPane>
           <Tabs.TabPane tab='Đã hủy' key={BookingStatus.CANCEL}>
             <BookingHistoryTable
               type={BookingStatus.CANCEL}
-              data={bookingHistories?.items}
-              loading={status === 'pending'}
-              refresh={refreshBookingHistory}
+              data={bookingHistories?.data}
+              loading={bookingHistories.isLoading}
+              refresh={bookingHistories.refetch}
             />
           </Tabs.TabPane>
         </Tabs>

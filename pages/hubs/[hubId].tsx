@@ -17,27 +17,45 @@ import {
   Tabs,
 } from 'antd';
 import { useRouter } from 'next/router';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import _ from 'lodash';
 import type { BookingPayload, HubDetails, Pitch, Rating } from 'types';
 import { CheckboxOptionType } from 'antd/lib/checkbox/Group';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
-import { getHubById } from '@services/hubApi';
+import { getHubById, getAllHubs } from '@services/hubApi';
 import { useGlobalContext } from 'contexts/global';
 import { createBooking } from '@services/bookingApi';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { getHubRatings, postUserRating } from '@services/ratingFirebase';
 import moment from 'moment';
 import { postNotification } from '@services/notificationFirebase';
+import { useSession } from 'next-auth/react';
+import { io, Socket } from 'socket.io-client';
 
 interface Props {
   hubDetails: HubDetails;
 }
 
+const costMapper = (cost: any): CheckboxOptionType[] =>
+  _.map(
+    cost,
+    ({ time, value }): CheckboxOptionType => ({
+      label: (
+        <div>
+          <div>{time}</div>
+          <div>
+            {`${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} (VND/giờ)
+          </div>
+        </div>
+      ),
+      value: time,
+    }),
+  );
 export default function HubDetailsPage(props: Props) {
   const { hubDetails } = props;
-  const { cities, isAuthenticated, user } = useGlobalContext();
+  const { cities, currentCity } = useGlobalContext();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { hubId } = router.query;
   const [bookingPayload, setBookingPayload] = useState<BookingPayload>();
@@ -45,35 +63,28 @@ export default function HubDetailsPage(props: Props) {
   const formRatingRef = useRef<FormInstance<any>>(null);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [userRating, setUserRating] = useState<Rating>();
-  const hubRate =
-    _.reduce(ratings, (sum, { rate }) => sum + rate, 0) /
-    (_.size(ratings) || 1);
+  const [updatedPitchId, setUpdatedPitchId] = useState<string>();
+  const hubRate = useMemo(
+    () =>
+      _.reduce(ratings, (sum, { rate }) => sum + rate, 0) /
+      (_.size(ratings) || 1),
+    [ratings],
+  );
   const counterRef = useRef<NodeJS.Timer>();
   const timeoutRef = useRef<NodeJS.Timeout>();
-  const city = _.find(
-    cities,
-    ({ districts }) =>
-      !!_.find(districts, ({ id }) => id === hubDetails.address.district.id),
-  );
-  if (city) {
-    hubDetails.address.city = city;
-  }
-
-  const costMapper = (cost: any): CheckboxOptionType[] =>
-    _.map(
-      cost,
-      ({ time, value }): CheckboxOptionType => ({
-        label: (
-          <div>
-            <div>{time}</div>
-            <div>
-              {`${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} (VND/giờ)
-            </div>
-          </div>
-        ),
-        value: time,
-      }),
-    );
+  const socketRef = useRef<Socket>();
+  hubDetails.address.city = useMemo(
+    () =>
+      _.find(
+        cities,
+        ({ districts }) =>
+          !!_.find(
+            districts,
+            ({ id }) => id === hubDetails.address.district.id,
+          ),
+      ),
+    [hubDetails, cities],
+  )!;
 
   const handleSelectPitchCard = (pitch: Pitch, value?: any) => {
     value
@@ -84,35 +95,39 @@ export default function HubDetailsPage(props: Props) {
   const handleBooking = async (payload: BookingPayload) => {
     clearTimeout(timeoutRef.current);
     clearInterval(counterRef.current);
-    try {
-      setIsBooking(true);
-      const bookingRes = await createBooking(payload);
-      message.success(
-        'Đặt sân thành công! Vui lòng kiểm tra hộp thư email của bạn.',
-      );
-
-      postNotification(String(hubId), {
-        bookingId: bookingRes.id,
-        content: `Tài khoản ${user?.email} đã đặt sân.`,
-        createdAt: new Date().valueOf(),
-        marked: false,
-      });
-      router.push('/history');
-    } catch (error) {
-      console.error(error);
-      message.error('Đặt sân thất bại! Vui lòng thử lại.');
-    } finally {
-      setIsBooking(false);
-    }
+    setIsBooking(true);
+    // await createBooking({
+    //   ...payload,
+    //   cityId: currentCity?.id,
+    // });
+    socketRef.current?.emit(
+      'create-new-booking',
+      {
+        ...payload,
+        cityId: currentCity?.id,
+      },
+      (session as any).accessToken,
+    );
   };
 
   const onSubmit = () => {
-    if (isAuthenticated) {
+    if (status === 'unauthenticated') {
+      router.push({
+        pathname: '/login',
+        query: {
+          redirect: router.asPath,
+        },
+      });
+    } else {
       let secondsToGo = 5;
-      const modal = Modal.success({
+      const modal = Modal.confirm({
         title: 'Xác nhận yêu cầu đặt sân.',
         content: `Yêu cầu của bạn sẽ tự động gửi đi sau ${secondsToGo} giây.`,
         onOk: () => handleBooking(bookingPayload!),
+        onCancel: () => {
+          clearTimeout(timeoutRef.current);
+          clearInterval(counterRef.current);
+        },
       });
       timeoutRef.current = setTimeout(() => {
         clearInterval(counterRef.current);
@@ -125,34 +140,99 @@ export default function HubDetailsPage(props: Props) {
           content: `Yêu cầu của bạn sẽ tự động gửi đi sau ${secondsToGo} giây.`,
         });
       }, 1000);
+    }
+  };
+
+  const onSubmitRating = (values: any) => {
+    if (status === 'unauthenticated') {
+      router.push({
+        pathname: '/login',
+        query: {
+          redirect: router.asPath,
+        },
+      });
     } else {
-      router.push('/login');
+      postUserRating(
+        Number(hubId),
+        {
+          ...values,
+          email: session?.user?.email,
+          avatar: session?.user?.image,
+          updateAt: new Date().valueOf(),
+        },
+        () => {
+          formRatingRef.current?.resetFields();
+          message.success('Cảm ơn đánh giá của bạn <3!!!');
+        },
+      );
     }
   };
 
   useEffect(() => {
-    if (hubId && user) {
-      getHubRatings(Number(hubId), (values) => {
-        if (values) {
-          setRatings(values);
-          const found = _.find(values, ({ email }) => email === user?.email);
-          found && setUserRating(found);
-        }
-      });
+    if (hubId) {
+      getHubRatings(Number(hubId), (values) => setRatings(values));
     }
-  }, [hubId, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubId]);
+
+  useEffect(() => {
+    if (ratings.length > 0 && status === 'authenticated') {
+      const found = _.find(
+        ratings,
+        ({ email }) => email === session.user?.email,
+      );
+      found && setUserRating(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ratings, status]);
+
+  useEffect(() => {
+    const uri = 'wss://sport-hub-apis.eastasia.cloudapp.azure.com/booking';
+    const socket = io(uri, {
+      transports: ['websocket'],
+      withCredentials: true,
+      rejectUnauthorized: false,
+    });
+    socketRef.current = socket;
+
+    socket.on('disconnect', () => {
+      console.log('disconnected');
+    });
+
+    socket.on('create-new-booking', (createdBooking) => {
+      setUpdatedPitchId(createdBooking.pitch.id);
+      setIsBooking(false);
+      message.success(
+        'Đặt sân thành công! Vui lòng kiểm tra hộp thư email của bạn.',
+      );
+
+      postNotification(String(hubId), {
+        bookingId: createdBooking.id,
+        content: `Tài khoản ${session?.user?.email} đã đặt sân.`,
+        createdAt: new Date().valueOf(),
+        marked: false,
+      });
+      router.push('/history');
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('pong');
+    };
+  }, []);
 
   const fullAddress = `${hubDetails.address.street}, ${hubDetails.address.district.name}, ${hubDetails.address?.city?.name}`;
   return (
     <Fragment>
       <Head>
-        <title>{hubId} - SportHub</title>
+        <title>{hubDetails.name} - SportHub</title>
       </Head>
 
       <section className='section' style={{ paddingBottom: 0 }}>
         <PageHeader
           className='section'
-          onBack={() => router.back()}
+          onBack={() => router.push(`/explore?cityId=${currentCity?.id}`)}
           title={hubDetails.name}
           subTitle={
             <Rate
@@ -212,6 +292,7 @@ export default function HubDetailsPage(props: Props) {
                   <PitchCard
                     data={pitch}
                     options={costMapper(pitch.cost)}
+                    selected={bookingPayload?.pitchId}
                     onSelect={(value) => handleSelectPitchCard(pitch, value)}
                   />
                 </Col>
@@ -269,24 +350,7 @@ export default function HubDetailsPage(props: Props) {
               </Col>
               <Col sm={24} md={8}>
                 {!userRating && (
-                  <Form
-                    ref={formRatingRef}
-                    onFinish={(values) =>
-                      postUserRating(
-                        Number(hubId),
-                        {
-                          ...values,
-                          email: user?.email,
-                          avatar: user?.club?.avatar,
-                          updateAt: new Date().valueOf(),
-                        },
-                        () => {
-                          formRatingRef.current?.resetFields();
-                          message.success('Cảm ơn đánh giá của bạn <3!!!');
-                        },
-                      )
-                    }
-                  >
+                  <Form ref={formRatingRef} onFinish={onSubmitRating}>
                     <Form.Item
                       name='rate'
                       rules={[
@@ -324,9 +388,13 @@ export default function HubDetailsPage(props: Props) {
 HubDetailsPage.Layout = PrimaryLayout;
 
 export const getStaticPaths: GetStaticPaths = async (ctx) => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hubs`);
-  const hubs = await res.json();
-  const paths = _.map(hubs, ({ id }) => ({ params: { hubId: String(id) } }));
+  const hubs = await getAllHubs();
+  // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hubs`);
+  // const hubs = await res.json();
+
+  const paths = _.map(hubs.items, ({ id }) => ({
+    params: { hubId: String(id) },
+  }));
   return {
     paths,
     fallback: 'blocking',

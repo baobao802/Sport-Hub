@@ -5,6 +5,7 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
 } from 'axios';
+import https from 'https';
 
 const onRequest = (config: AxiosRequestConfig): AxiosRequestConfig => {
   const accessToken = localStore.getItem('accessToken');
@@ -27,11 +28,17 @@ const onResponseError = async (
 ): Promise<AxiosResponse | AxiosError> => {
   const originalRequest = error.config;
   if (error.response) {
-    if ((error.response.data as any)?.message === 'Invalid token') {
+    if ((error.response.data as any)?.message === 'Token expired') {
       try {
-        await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
-          withCredentials: true,
-        });
+        await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+          {
+            withCredentials: true,
+            httpsAgent: new https.Agent({
+              rejectUnauthorized: false,
+            }),
+          },
+        );
         return axios(originalRequest);
       } catch (_error) {
         return Promise.reject(_error);
@@ -55,6 +62,9 @@ const api = setupInterceptorsTo(
       'Content-Type': 'application/json',
     },
     withCredentials: true,
+    // httpsAgent: new https.Agent({
+    //   rejectUnauthorized: false,
+    // }),
   }),
 );
 

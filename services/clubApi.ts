@@ -30,7 +30,7 @@ export async function createClub(payload: CreateClubPayload) {
   return api.post<ClubDetails>('/clubs', payload).then((res) => res.data);
 }
 
-export async function updateClubById(id: number, payload: UpdateClubPayload) {
+export async function updateClubById(id: string, payload: UpdateClubPayload) {
   return api.patch(`/clubs/${id}`, {
     name: payload.name,
     bio: payload.bio,
